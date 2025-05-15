@@ -51,7 +51,41 @@ type Actress = Person & {
 // La funzione deve restituire l’oggetto Actress, se esiste, oppure null se non trovato.
 // Utilizza un type guard chiamato isActress per assicurarti che la struttura del dato ricevuto sia corretta.
 
+function isActress(dati: unknown): dati is Actress {
+  return (
+    typeof dati === "object" && dati !== null &&
+    "id" in dati && typeof dati.id === "number" &&
+    "name" in dati && typeof dati.name === "string" &&
+    "birth_year" in dati && typeof dati.birth_year === "number" &&
+    "death_year" in dati && typeof dati.death_year === "number" &&
+    "biography" in dati && typeof dati.biography === "string" &&
+    "image" in dati && typeof dati.image === "string" &&
+    "most_famous_movies" in dati &&
+    dati.most_famous_movies instanceof Array &&
+    dati.most_famous_movies.length === 3 &&
+    dati.most_famous_movies.every(m => typeof m === "string") &&
+    "awards" in dati && typeof dati.awards === "string" &&
+    "nationality" in dati && typeof dati.nationality === "string"
+  )
+}
 
+async function getActress(id: number): Promise<Actress | null> {
+  try {
+    const response = await fetch(`https://boolean-spec-frontend.vercel.app/freetestapi/actresses/${id}`);
+    const dati: unknown = await response.json();
+    if (!isActress(dati)) {
+      throw new Error("Formato dei dati non valido");
+    }
+    return dati;
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error("Errore durante il recupero dell'attrice:", err);
+    } else {
+      console.error("Errore sconosciuto:", err);
+    }
+    return null;
+  }
+}
 
 // 📌 Milestone 4
 // Crea una funzione getAllActresses che chiama:
