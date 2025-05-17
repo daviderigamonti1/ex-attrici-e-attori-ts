@@ -51,7 +51,7 @@ type Actress = Person & {
 // La funzione deve restituire l’oggetto Actress, se esiste, oppure null se non trovato.
 // Utilizza un type guard chiamato isActress per assicurarti che la struttura del dato ricevuto sia corretta.
 
-function isActress(dati: unknown): dati is Actress {
+function isPerson(dati: unknown): dati is Person {
   return (
     typeof dati === "object" && dati !== null &&
     "id" in dati && typeof dati.id === "number" &&
@@ -59,7 +59,13 @@ function isActress(dati: unknown): dati is Actress {
     "birth_year" in dati && typeof dati.birth_year === "number" &&
     "death_year" in dati && typeof dati.death_year === "number" &&
     "biography" in dati && typeof dati.biography === "string" &&
-    "image" in dati && typeof dati.image === "string" &&
+    "image" in dati && typeof dati.image === "string"
+  )
+}
+
+function isActress(dati: unknown): dati is Actress {
+  return (
+    isPerson(dati) &&
     "most_famous_movies" in dati &&
     dati.most_famous_movies instanceof Array &&
     dati.most_famous_movies.length === 3 &&
@@ -167,6 +173,104 @@ function updateActress(
 // Scottish, New Zealand, Hong Kong, German, Canadian, Irish.
 // Implementa anche le versioni getActor, getAllActors, getActors, createActor, updateActor.
 
+type ActorNationality =
+  | ActressNationality
+  | "Scottish"
+  | "New Zealand"
+  | "Hong Kong"
+  | "German"
+  | "Canadian"
+  | "Irish"
+
+type Actor = Person & {
+  known_for: [string, string, string],
+  awards: [string] | [string, string]
+  nationality: ActorNationality
+}
+
+function isActor(dati: unknown): dati is Actor {
+  return (
+    isPerson(dati) &&
+    "known_for" in dati &&
+    dati.known_for instanceof Array &&
+    dati.known_for.length === 3 &&
+    dati.known_for.every(m => typeof m === "string") &&
+    "awards" in dati &&
+    dati.awards instanceof Array &&
+    (dati.awards.length === 1 || dati.awards.length === 2) &&
+    dati.awards.every(m => typeof m === "string") &&
+    "nationality" in dati && typeof dati.nationality === "string"
+  )
+}
+
+async function getActor(id: number): Promise<Actor | null> {
+  try {
+    const response = await fetch(`https://boolean-spec-frontend.vercel.app/freetestapi/actors/${id}`);
+    const dati: unknown = await response.json();
+    if (!isActor(dati)) {
+      throw new Error("Formato dei dati non valido");
+    }
+    return dati;
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error("Errore durante il recupero dell'attore:", err);
+    } else {
+      console.error("Errore sconosciuto:", err);
+    }
+    return null;
+  }
+}
+
+async function getAllActors(): Promise<Actor[]> {
+  try {
+    const response = await fetch("https://boolean-spec-frontend.vercel.app/freetestapi/actors");
+    if (!response.ok) {
+      throw new Error(`Errore HTTP ${response.status}: ${response.statusText}`)
+    }
+    const dati: unknown = await response.json();
+    if (!(dati instanceof Array)) {
+      throw new Error("Formato dei dati non valido: non è un array.");
+    }
+    const validActor: Actor[] = dati.filter(isActor);
+    return validActor;
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error("Errore durante il recupero degli attori:", err);
+    } else {
+      console.error("Errore sconosciuto:", err);
+    }
+    return [];
+  }
+}
+
+async function getActors(ids: number[]): Promise<(Actor | null)[]> {
+  try {
+    const promises = ids.map(id => getActor(id));
+    const actors = await Promise.all(promises);
+    return actors;
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error("Errore durante il recupero degli attori:", err);
+    } else {
+      console.error("Errore sconosciuto:", err);
+    }
+    return [];
+  }
+}
+
+function createActor(data: Omit<Actor, "id">): Actor {
+  return {
+    ...data,
+    id: Math.floor(Math.random() * 1000000)
+  }
+}
+
+function updateActor(
+  actors: Actor,
+  updates: Partial<Omit<Actor, "id" | "name">>
+): Actor {
+  return { ...actors, ...updates };
+}
 
 // 🎯 BONUS 3
 // Crea la funzione createRandomCouple che usa getAllActresses e getAllActors per restituire un’array che ha sempre due elementi: al primo posto una Actress casuale e al secondo posto un Actor casuale.
